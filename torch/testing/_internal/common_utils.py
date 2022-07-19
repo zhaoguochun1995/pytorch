@@ -1436,7 +1436,7 @@ class CudaNonDefaultStream():
         for d in range(torch.cuda.device_count()):
             self.beforeStreams.append(torch.cuda.current_stream(d))
             deviceStream = torch.cuda.Stream(device=d)
-            torch._C._cuda_setStream(deviceStream.stream_id, deviceStream.device_index)
+            torch._C._cuda_setStream((deviceStream.stream_id, deviceStream.device_index))
         torch._C._cuda_setDevice(beforeDevice)
 
     def __exit__(self, exec_type, exec_value, traceback):
@@ -1444,7 +1444,7 @@ class CudaNonDefaultStream():
         # CUDA devices.
         beforeDevice = torch.cuda.current_device()
         for d in range(torch.cuda.device_count()):
-            torch._C._cuda_setStream(self.beforeStreams[d].stream_id, beforeStreams[d].device_index)
+            torch._C._cuda_setStream((self.beforeStreams[d].stream_id, beforeStreams[d].device_index))
         torch._C._cuda_setDevice(beforeDevice)
 
 class CudaMemoryLeakCheck():
