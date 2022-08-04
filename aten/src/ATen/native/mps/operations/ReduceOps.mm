@@ -147,12 +147,13 @@ void reduction_out_mps
     const std::string& func_name) {
 
   IntArrayRef input_shape = input_t.sizes();
+  int64_t input_dim = input_shape.size();
 
   if (opt_dim.has_value()) {
     IntArrayRef dim = opt_dim.value();
     for(int i = 0; i < dim.size(); i++) {
-      auto wrap_dim = maybe_wrap_dim(dim[i], input_shape.size());
-      TORCH_CHECK(wrap_dim < input_shape.size(),
+      auto wrap_dim = maybe_wrap_dim(dim[i], input_dim);
+      TORCH_CHECK(wrap_dim < input_dim || (wrap_dim == 0 && input_dim == 0),
       func_name+": reduction dim must be in the range of input shape")
     }
   }
