@@ -62,6 +62,25 @@ def _prepare_jit(model, qconfig_dict, inplace=False, quant_type=QuantType.STATIC
         model = wrap_cpp_module(model_c)
     return model
 
+def _prepare_ondevice_jit(model, qconfig_dict, method_name='forward', inplace=False, quant_type=QuantType.STATIC):
+    _check_is_script_module(model)
+    if not all(isinstance(x, str) for x in qconfig_dict.keys()):
+        raise ValueError('qconfig_dict should only contain names(str) as keys.')
+    scripted_qconfig_dict = script_qconfig_dict(qconfig_dict)
+    method_graph = model._c._get_method(method_name).graph
+    torch._C._jit_pass_inline(method_graph)
+    model = fuse_conv_bn_jit(model, inplace)
+    model_c = torch._C._jit_pass_insert_observer_method_for_ondevice_ptq(model._c,
+                                                                         method_name,
+                                                                         scripted_qconfig_dict,
+                                                                         inplace,
+                                                                         quant_type)
+    if inplace:
+        model._reconstruct(model_c)
+    else:
+        model = wrap_cpp_module(model_c)
+    return model
+
 def prepare_jit(model, qconfig_dict, inplace=False):
     torch._C._log_api_usage_once("quantization_api.quantize_jit.prepare_jit")
     return _prepare_jit(model, qconfig_dict, inplace, quant_type=QuantType.STATIC)
@@ -69,6 +88,10 @@ def prepare_jit(model, qconfig_dict, inplace=False):
 def prepare_dynamic_jit(model, qconfig_dict, inplace=False):
     torch._C._log_api_usage_once("quantization_api.quantize_jit.prepare_dynamic_jit")
     return _prepare_jit(model, qconfig_dict, inplace, quant_type=QuantType.DYNAMIC)
+
+
+def _prepare_ondevice_dynamic_jit(model, qconfig_dict, method_name='forward', inplace=False):
+    return _prepare_ondevice_jit(model, qconfig_dict, method_name, inplace, quant_type=QuantType.DYNAMIC)
 
 def _convert_jit(model, inplace=False, debug=False, quant_type=QuantType.STATIC,
                  preserved_attrs=None):
@@ -93,6 +116,21 @@ def _convert_jit(model, inplace=False, debug=False, quant_type=QuantType.STATIC,
     torch._C._jit_pass_dce(model.graph)
     return model
 
+
+def _convert_ondevice_jit(model, method_name, inplace=False, debug=False, quant_type=QuantType.STATIC):
+    _check_is_script_module(model)
+    assert quant_type == QuantType.DYNAMIC, "This API, while should work for static quant, is only tested for dynamic quant."
+    assert not method_name.startswith("observe_"), "Pass in valid method to be quantized, e.g. forward"
+    observe_method_name = "observe_" + method_name
+    model_c = model._c
+    model_c = torch._C._jit_pass_insert_quant_dequant_for_ondevice_ptq(
+        model._c, observe_method_name, inplace, debug, QuantType.DYNAMIC)
+    if inplace:
+        model._reconstruct(model_c)
+    else:
+        model = wrap_cpp_module(model_c)
+    return model
+
 def convert_jit(model, inplace=False, debug=False, preserved_attrs=None):
     torch._C._log_api_usage_once("quantization_api.quantize_jit.convert_jit")
     return _convert_jit(model, inplace, debug, quant_type=QuantType.STATIC, preserved_attrs=preserved_attrs)
@@ -100,6 +138,10 @@ def convert_jit(model, inplace=False, debug=False, preserved_attrs=None):
 def convert_dynamic_jit(model, inplace=False, debug=False, preserved_attrs=None):
     torch._C._log_api_usage_once("quantization_api.quantize_jit.convert_dynamic_jit")
     return _convert_jit(model, inplace, debug, quant_type=QuantType.DYNAMIC, preserved_attrs=preserved_attrs)
+
+
+def _convert_ondevice_dynamic_jit(model, method_name, inplace=False, debug=False):
+    return _convert_ondevice_jit(model, method_name, inplace, debug, quant_type=QuantType.DYNAMIC)
 
 def _quantize_jit(model, qconfig_dict, run_fn=None, run_args=None, inplace=False, debug=False, quant_type=QuantType.STATIC):
     # Always do inplace convert because the Tensor is already
