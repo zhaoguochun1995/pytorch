@@ -313,6 +313,7 @@ class TORCH_CUDA_CU_API KernelArgumentHolder {
     for (const auto& arg : self.arguments_) {
       push(arg.get());
     }
+    return *this;
   }
 
   // Push a tensor to the arguments
