@@ -924,6 +924,7 @@ void initializeCudaContext() {
 namespace {
 
 // Dump PTX or CUBIN to a file
+#if CUDA_VERSION >= 11010
 void dumpCompiledCodeToFile(
     const nvrtcProgram& program,
     int fusion_id,
@@ -946,6 +947,7 @@ void dumpCompiledCodeToFile(
   out.write(code.data(), size);
   out.close();
 }
+#endif
 
 } // namespace
 
@@ -1189,6 +1191,7 @@ std::pair<NvrtcFunction, std::string> nvrtcCompile(
     AT_CUDA_NVRTC_CHECK(getFunc(program, ptx.data()));
   }
 
+#if CUDA_VERSION >= 11010
   if (isDebugDumpEnabled(DebugDumpOption::Ptx)) {
     dumpCompiledCodeToFile(program, id, false);
   }
@@ -1199,6 +1202,7 @@ std::pair<NvrtcFunction, std::string> nvrtcCompile(
         "CUBIN not available as the kernel was compiled only to PTX");
     dumpCompiledCodeToFile(program, id, true);
   }
+#endif
 
   NvrtcFunction compiled_kernel_;
 
