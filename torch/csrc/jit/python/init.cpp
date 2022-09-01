@@ -526,6 +526,17 @@ void initJITBindings(PyObject* module) {
           py::arg("quant_type_int") = 1,
           py::arg("preserved_attrs") = std::vector<std::string>())
       .def(
+          "_jit_pass_quant_finalize_for_ondevice_ptq",
+          [](Module& module,
+             int quant_type_int,
+             const std::string& method_name) {
+            auto quant_type = static_cast<QuantType>(quant_type_int);
+            return FinalizeOnDevicePTQ(module, quant_type, method_name);
+          },
+          py::arg("module"),
+          py::arg("quant_type_int") = 1,
+          py::arg("preserved_attrs") = std::vector<std::string>())
+      .def(
           "_jit_pass_pattern_based_rewrite",
           [](const Module& m) { return PatternBasedRewrite(m); })
       .def(
@@ -1327,7 +1338,8 @@ void initJITBindings(PyObject* module) {
           })
       .def("__bool__", [](c10::SymIntNode a) { return a->bool_(); })
       .def("__int__", [](c10::SymIntNode a) { return a->int_(); })
-      .def("__str__", [](c10::SymIntNode a) { return a->str(); });
+      .def("__str__", [](c10::SymIntNode a) { return a->str(); })
+      .def("__repr__", [](c10::SymIntNode a) { return a->str(); });
 
   // NOLINTNEXTLINE(bugprone-unused-raii)
   py::class_<CompleteArgumentSpec>(m, "CompleteArgumentSpec")
