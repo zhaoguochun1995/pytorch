@@ -23,6 +23,8 @@
 #include <nvfuser_resources/broadcast.h>
 #include <nvfuser_resources/fp16_support.h>
 #include <nvfuser_resources/fused_reduction.h>
+#include <nvfuser_resources/fused_welford_helper.h>
+#include <nvfuser_resources/fused_welford_impl.h>
 #include <nvfuser_resources/grid_broadcast.h>
 #include <nvfuser_resources/grid_reduction.h>
 #include <nvfuser_resources/grid_sync.h>
@@ -122,7 +124,9 @@ std::string kernelPreamble() {
 #else
   ss << nvfuser_resources::warp_rocm_cu;
 #endif
+  ss << nvfuser_resources::fused_welford_helper_cu;
   ss << nvfuser_resources::fused_reduction_cu;
+  ss << nvfuser_resources::fused_welford_impl_cu;
   ss << nvfuser_resources::swizzle_cu;
 
   // Random utilities
