@@ -257,6 +257,7 @@ case "$image" in
     DB=yes
     VISION=yes
     ROCM_VERSION=5.1.1
+    NINJA_VERSION=1.9.0
     ;;
   pytorch-linux-focal-rocm5.2-py3.7)
     ANACONDA_PYTHON_VERSION=3.7
@@ -265,6 +266,7 @@ case "$image" in
     DB=yes
     VISION=yes
     ROCM_VERSION=5.2
+    NINJA_VERSION=1.9.0
     ;;
   pytorch-linux-focal-py3.7-gcc7)
     ANACONDA_PYTHON_VERSION=3.7
