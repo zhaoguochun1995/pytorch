@@ -11,6 +11,6 @@ elif [[ "$CU_VERSION" == "cu100" ]]; then
   export VSDEVCMD_ARGS=""
   powershell packaging/windows/internal/vs2017_install.ps1
 else
-  export VC_YEAR=2019
+  export VC_YEAR=2022
   export VSDEVCMD_ARGS=""
 fi
