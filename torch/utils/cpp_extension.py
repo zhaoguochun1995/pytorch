@@ -18,7 +18,7 @@ from .file_baton import FileBaton
 from ._cpp_extension_versioner import ExtensionVersioner
 from .hipify import hipify_python
 from .hipify.hipify_python import GeneratedFileCleaner
-from typing import List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple
 from torch.torch_version import TorchVersion
 
 from setuptools.command.build_ext import build_ext
@@ -45,12 +45,14 @@ SUBPROCESS_DECODE_ARGS = ('oem',) if IS_WINDOWS else ()
 MINIMUM_GCC_VERSION = (5, 0, 0)
 MINIMUM_MSVC_VERSION = (19, 0, 24215)
 
+VersionRange = Tuple[Tuple[int, ...], Tuple[int, ...]]
+VersionMap = Dict[str, VersionRange]
 # The following values were taken from the following GitHub gist that
 # summarizes the minimum valid major versions of g++/clang++ for each supported
 # CUDA version: https://gist.github.com/ax3l/9489132
 # Or from include/crt/host_config.h in the CUDA SDK
 # The second value is the exclusive(!) upper bound, i.e. min <= version < max
-CUDA_GCC_VERSIONS = {
+CUDA_GCC_VERSIONS: VersionMap = {
     '10.2': (MINIMUM_GCC_VERSION, (9, 0)),
     '11.0': (MINIMUM_GCC_VERSION, (10, 0)),
     '11.1': (MINIMUM_GCC_VERSION, (11, 0)),
@@ -63,7 +65,7 @@ CUDA_GCC_VERSIONS = {
 }
 
 MINIMUM_CLANG_VERSION = (3, 3, 0)
-CUDA_CLANG_VERSIONS = {
+CUDA_CLANG_VERSIONS: VersionMap = {
     '10.2': (MINIMUM_CLANG_VERSION, (9, 0)),
     '11.1': (MINIMUM_CLANG_VERSION, (11, 0)),
     '11.2': (MINIMUM_CLANG_VERSION, (12, 0)),
@@ -395,7 +397,7 @@ def _check_cuda_version(compiler_name: str, compiler_version: TorchVersion) -> N
             _is_binary_build()):
         return
 
-    cuda_compiler_bounds = CUDA_CLANG_VERSIONS if compiler_name.startswith('clang') else CUDA_GCC_VERSIONS
+    cuda_compiler_bounds: VersionMap = CUDA_CLANG_VERSIONS if compiler_name.startswith('clang') else CUDA_GCC_VERSIONS
 
     if cuda_str_version not in cuda_compiler_bounds:
         warnings.warn(f'There are no {compiler_name} version bounds defined for CUDA version {cuda_str_version}')
