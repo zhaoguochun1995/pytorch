@@ -250,16 +250,16 @@ case "$image" in
     DB=yes
     VISION=yes
     ;;
-  pytorch-linux-focal-rocm5.1-py3.7)
-    ANACONDA_PYTHON_VERSION=3.7
+  pytorch-linux-focal-rocm5.1-py3.8)
+    ANACONDA_PYTHON_VERSION=3.8
     GCC_VERSION=9
     PROTOBUF=yes
     DB=yes
     VISION=yes
     ROCM_VERSION=5.1.1
     ;;
-  pytorch-linux-focal-rocm5.2-py3.7)
-    ANACONDA_PYTHON_VERSION=3.7
+  pytorch-linux-focal-rocm5.2-py3.8)
+    ANACONDA_PYTHON_VERSION=3.8
     GCC_VERSION=9
     PROTOBUF=yes
     DB=yes
