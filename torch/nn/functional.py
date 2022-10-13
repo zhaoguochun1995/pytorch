@@ -1953,7 +1953,6 @@ def tanh(input):
 
     See :class:`~torch.nn.Tanh` for more details.
     """
-    warnings.warn("nn.functional.tanh is deprecated. Use torch.tanh instead.")
     return input.tanh()
 
 
