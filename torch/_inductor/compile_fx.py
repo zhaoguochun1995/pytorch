@@ -17,6 +17,7 @@ from .debug import DebugContext
 from .decomposition import select_decomp_table
 from .graph import GraphLowering
 from .utils import (
+    create_static_inputs,
     dynamo_logging,
     dynamo_optimizations,
     dynamo_utils,
@@ -62,11 +63,6 @@ def index_expanded_dims(t, expanded_dims):
     return t
 
 
-def complex_memory_overlap(t):
-    indexed_tensor = index_expanded_dims(t, get_expanded_dims(t))
-    return torch._debug_has_internal_overlap(indexed_tensor) != 0
-
-
 def is_unspec_input(t):
     return t.device.type == "cpu" and t.dim() == 0
 
@@ -106,16 +102,11 @@ def compile_fx_inner(
         graph.run(*example_inputs)
         compiled_fn = graph.compile_to_fn()
 
-    complex_memory_overlap_inputs = any(
-        complex_memory_overlap(t) for t in example_inputs
-    )
-
     if (
         cudagraphs
         and set(graph.device_types) == {"cuda"}
         and not graph.mutated_inputs
         and not has_incompatible_cudagraph_ops(gm)
-        and not complex_memory_overlap_inputs
     ):
         compiled_fn = cudagraphify(
             compiled_fn, example_inputs, static_input_idxs=range(num_fixed)
@@ -128,8 +119,6 @@ def compile_fx_inner(
         elif set(graph.device_types) == {"cuda"}:
             if graph.mutated_inputs:
                 log.warning("skipping cudagraphs due to input mutation")
-            elif complex_memory_overlap_inputs:
-                log.warning("skipping cudagraphs due to complex input striding")
 
     result = align_inputs(compiled_fn, example_inputs, range(num_fixed))
     _step_logger()(
@@ -214,26 +203,11 @@ def cudagraphify_impl(model, inputs, static_input_idxs=()):
     """
     static_input_idxs = remove_unaligned_input_idxs(inputs, static_input_idxs)
 
-    def static_input(x):
-        """
-        Copy and input while preserving strides
-        """
-        # TODO(jansel): figure out why this version doesn't work:
-        # return torch.empty_strided(x.size(), x.stride(), dtype=x.dtype, device=x.device)
-        needed_size = (
-            sum((shape - 1) * stride for shape, stride in zip(x.size(), x.stride())) + 1
-        )
-        buffer = torch.zeros(needed_size, dtype=x.dtype, device=x.device)
-        return torch.as_strided(buffer, x.size(), x.stride())
-
     assert isinstance(inputs, (list, tuple))
     # dynamo wraps unspec variable as 0 dim tensor on CPU, need to move to GPU explicitly
     inputs = [x.to("cuda") if is_unspec_input(x) else x for x in inputs]
 
-    static_inputs = [
-        static_input(x) if idx not in static_input_idxs else x
-        for idx, x in enumerate(inputs)
-    ]
+    static_inputs = create_static_inputs(inputs, static_input_idxs)
 
     inps_expanded_dims = [
         get_expanded_dims(x) if idx not in static_input_idxs else []
