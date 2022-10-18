@@ -1,6 +1,7 @@
 from typing import Dict, List, NoReturn, Sequence, Union
 
 from torchgen.api.types import (
+    ArrayRefCType,
     BaseCType,
     Binding,
     boolT,
@@ -250,6 +251,12 @@ Check this module for more information.
             except UnsatError:
                 pass
 
+        # TODO: These are referentially equal, shouldn't have to do this;
+        # ensuring we don't use type synonym IntArrayRef in codegen would
+        # help
+        if goal.type == ArrayRefCType(BaseCType(longT)):
+            return solve(NamedCType(goal.name, BaseCType(intArrayRefT)), direct=direct)
+
         if direct:
             unsat(goal)
 
@@ -332,7 +339,7 @@ Check this module for more information.
         elif goal.type == BaseCType(symIntArrayRefT):
             try:
                 r = direct_solve(NamedCType(goal.name, BaseCType(intArrayRefT)))
-                return f"c10::fromIntArrayRef({r})"
+                return f"c10::fromIntArrayRefSlow({r})"
             except UnsatError:
                 return direct_solve(NamedCType(goal.name, longSymVec_ctype))
         elif goal.type == BaseCType(SymIntT):
@@ -364,7 +371,7 @@ Check this module for more information.
             argname = direct_solve(
                 NamedCType(goal.name, BaseCType(optionalIntArrayRefT))
             )
-            return f"{argname}.has_value() ? c10::make_optional(c10::fromIntArrayRef(*{argname})) : c10::nullopt"
+            return f"{argname}.has_value() ? c10::make_optional(c10::fromIntArrayRefSlow(*{argname})) : c10::nullopt"
         elif goal.type == BaseCType(optionalScalarRefT):
             return direct_solve(NamedCType(goal.name, optionalScalar_ctype))
         elif goal.type == BaseCType(optionalTensorRefT):

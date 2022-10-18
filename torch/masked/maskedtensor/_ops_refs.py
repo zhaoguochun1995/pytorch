@@ -254,6 +254,11 @@ def stride(func, *args, **kwargs):
     return None
 
 
+@register_dispatch_func([torch.ops.aten.sym_stride])
+def sym_stride(func, *args, **kwargs):
+    return None
+
+
 @register_dispatch_func([torch.ops.prim.layout])
 def layout(func, *args, **kwargs):
     return _get_data(args[0]).layout
@@ -351,11 +356,12 @@ def _softmax_backward_data(func, *args, **kwargs):
     if is_masked_tensor(grad) and is_masked_tensor(output):
         if not _masks_match(grad, output):
             raise ValueError("__torch_dispatch__, {func}: expected the masks of grad and output to match")
+        grad_data = _get_data(grad)
         new_grad_data = torch.ops.aten._masked_softmax_backward(
-            _get_data(grad),
+            grad_data,
             _get_data(output),
             ~_maybe_get_mask(grad),
-            dim
+            dim % grad_data.ndim,
         )
         res = MaskedTensor(new_grad_data, _maybe_get_mask(grad))
         return res
