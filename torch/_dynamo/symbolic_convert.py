@@ -360,8 +360,11 @@ class InstructionTranslatorBase(object):
             # InliningInstructionTranslator. The InliningInstructionTranslator
             # mutates the output object and is restored to original state if
             # there was an exception.
+            # breakpoint()
             if isinstance(self, InstructionTranslator):
                 self.output.cleanup()
+                # breakpoint()
+                print("GUARDS", self.output.shape_env.guards)
 
     def push(self, val):
         assert val is None or isinstance(

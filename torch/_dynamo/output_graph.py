@@ -33,6 +33,8 @@ from .variables.tensor import (
     UnspecializedNumpyVariable,
     UnspecializedPythonVariable,
 )
+import functorch._src.config as functorch_config
+from torch.fx.experimental.symbolic_shapes import ShapeEnv
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +70,7 @@ class FakeRootModule(torch.nn.Module):
     def __repr__(self):
         return "FakeRootModule(...)"
 
+DYNAMO_GLOBAL_SHAPE_ENV = ShapeEnv()
 
 class OutputGraph(fx.Tracer):
     """
@@ -104,6 +107,7 @@ class OutputGraph(fx.Tracer):
         self.random_values_var = None
         self.initial_random_state = ()
         self.unspec_variable_map = {}
+        self.shape_env = DYNAMO_GLOBAL_SHAPE_ENV
 
     @property
     def output(self):
@@ -362,6 +366,7 @@ class OutputGraph(fx.Tracer):
         self.add_output_instructions(
             [PyCodegen(tx).create_store(var) for var in reversed(restore_vars)]
         )
+       # breakpoint()
 
     def compile_and_call_fx_graph(self, tx, rv, root):
         """
@@ -394,8 +399,16 @@ class OutputGraph(fx.Tracer):
         gm.recompile()
         gm.compile_subgraph_reason = self.compile_subgraph_reason
         name = unique_id("__compiled_fn")
+
+        if config.dynamic_shapes:
+            breakpoint()
+            functorch_config.use_dynamic_shapes = True
+            gm._dynamo_shape_env = tx.output.shape_env
+
         compiled_fn = self.call_user_compiler(gm)
         compiled_fn = disable(compiled_fn)
+
+        # breakpoint()
         counters["stats"]["unique_graphs"] += 1
         self.install_global(name, compiled_fn)
 

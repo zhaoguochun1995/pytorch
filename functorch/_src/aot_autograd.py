@@ -279,6 +279,7 @@ class AOTConfig:
     partition_fn: Callable
     decompositions: Dict[Callable, Callable]
     num_params_buffers: int
+    shape_env: Optional[ShapeEnv]
 
 
 def aot_dispatch_base(flat_fn, flat_args: List[Tensor], aot_config: AOTConfig):
@@ -476,10 +477,9 @@ def aot_dispatch_autograd(flat_fn, flat_args: List[Tensor], aot_config: AOTConfi
 
     return compiled_function
 
-
 @dynamo_timed
 def create_aot_dispatcher_function(
-    flat_fn, flat_args: List[Tensor], aot_config: AOTConfig
+    flat_fn, flat_args: List[Tensor], aot_config: AOTConfig, shape_env: Optional[ShapeEnv] = None
 ):
     """
     Traces the forward and backward graphs of the attr:`flat_fn` to generate a
@@ -522,8 +522,14 @@ def create_aot_dispatcher_function(
 
     if config.use_dynamic_shapes:
         assert config.use_fake_tensor, "Dynamic shapes only works with fake tensor"
+    
+    if shape_env is None:
+        breakpoint()
+        shape_env = ShapeEnv() if config.use_dynamic_shapes else None
+    else:
+        assert config.use_dynamic_shapes, "shape_env passed in - config must be set to use_dynamic_shapes"
 
-    shape_env = ShapeEnv() if config.use_dynamic_shapes else None
+    # breakpoint()
     fake_mode = FakeTensorMode(shape_env=shape_env) if config.use_fake_tensor else nullcontext()
     cross_ref = CrossRefFakeMode() if config.debug_fake_cross_ref else nullcontext()
     python_dispatcher_mode = enable_python_dispatcher() if config.use_dynamic_shapes else nullcontext()
@@ -601,9 +607,11 @@ def aot_function(
     partition_fn: Callable = default_partition,
     decompositions: Optional[Dict] = None,
     num_params_buffers: int = 0,
+    shape_env: Optional[ShapeEnv] = None,
     hasher_type=None,  # deprecated
     static_argnums: Optional[Tuple[int]] = None,  # deprecated
 ) -> Callable:
+    # breakpoint()
     """
     Traces the forward and backward graph of :attr:`fn` using torch dispatch
     mechanism, and then compiles the generated forward and backward graphs
@@ -712,6 +720,7 @@ def aot_function(
                 flat_fn,
                 flat_args,
                 aot_config,
+                shape_env,
             )
             cached_res = (compiled_fn, out_spec)
 
@@ -744,7 +753,7 @@ def aot_module(mod: nn.Module, *args, **kwargs) -> nn.Module:
         :attr:`mod`, but with forward and backward graph compiled.
 
     """
-
+    # breakpoint()
     def functional_call(named_params, named_buffers, *args, **kwargs):
         params_and_buffers = {**named_params, **named_buffers}
         return stateless.functional_call(mod, params_and_buffers, args, kwargs)
@@ -782,7 +791,7 @@ def aot_module_simplified(mod: nn.Module, *top_args, **top_kwargs) -> nn.Module:
     :func:`aot_module_simplified` removes these overheads.
     """
     #########################################################
-
+    # breakpoint()
     params = {
         **dict(_named_parameters(mod, remove_duplicate=False)),
         **dict(_named_buffers(mod, remove_duplicate=False)),
@@ -819,9 +828,11 @@ def aot_module_simplified(mod: nn.Module, *top_args, **top_kwargs) -> nn.Module:
         bw_compiler: Optional[Callable] = None,
         partition_fn: Callable = default_partition,
         decompositions: Optional[Dict] = None,
+        shape_env: Optional[ShapeEnv] = None,
         hasher_type=None,
         static_argnums=None,
     ) -> Callable:
+        # breakpoint()
         assert static_argnums is None
         if bw_compiler is None:
             bw_compiler = fw_compiler
@@ -831,6 +842,7 @@ def aot_module_simplified(mod: nn.Module, *top_args, **top_kwargs) -> nn.Module:
             partition_fn=partition_fn,
             decompositions=decompositions,
             num_params_buffers=params_len,
+            shape_env=shape_env,
         )
 
         compiled_fn = None
@@ -843,6 +855,7 @@ def aot_module_simplified(mod: nn.Module, *top_args, **top_kwargs) -> nn.Module:
                     fn,
                     args,
                     aot_config,
+                    shape_env,
                 )
             return compiled_fn(args)
 

@@ -25,6 +25,7 @@ from .utils import (
 )
 from .virtualized import V
 
+
 log = logging.getLogger(__name__)
 ALIGNMENT = 16
 
@@ -322,7 +323,6 @@ def count_tangents(fx_g: torch.fx.GraphModule):
 
 _graph_counter = itertools.count(0)
 
-
 def compile_fx(model_: torch.fx.GraphModule, example_inputs_: List[torch.Tensor]):
     """Main entrypoint to a compile given FX graph"""
 
@@ -375,6 +375,7 @@ def compile_fx(model_: torch.fx.GraphModule, example_inputs_: List[torch.Tensor]
             fw_compiler=fw_compiler,
             bw_compiler=bw_compiler,
             decompositions=select_decomp_table(),
+            shape_env=model_._dynamo_shape_env if hasattr(model_, "_dynamo_shape_env") else None,
             partition_fn=functools.partial(
                 min_cut_rematerialization_partition, compiler="inductor"
             ),

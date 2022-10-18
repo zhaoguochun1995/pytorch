@@ -237,6 +237,7 @@ def catch_errors_wrapper(callback):
                         return hijacked_callback(frame, cache_size)
 
             with compile_lock:
+                # breakpoint()
                 return callback(frame, cache_size)
         except Exception:
             log.exception("Error while processing frame")

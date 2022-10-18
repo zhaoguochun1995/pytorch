@@ -533,6 +533,7 @@ class CheckFunctionManager:
         )
         check_tensors_fn = None
         check_tensors_verbose_fn = None
+        breakpoint()
         if tensor_check_names:
             tensor_check_examples = (
                 local_builder.tensor_check_examples

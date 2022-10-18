@@ -356,6 +356,7 @@ class SizeVarAllocator(object):
         if val < 0:
             # all variables are positive
             return -self[-val]
+        breakpoint()
         if val in self.val_to_var:
             return self.val_to_var[val]
         var = Symbol(f"{self.prefix}{len(self.var_to_val)}")
