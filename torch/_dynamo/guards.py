@@ -177,6 +177,7 @@ class GuardBuilder:
         # Code is python expression strings generated for each guard
         self.code: List[str] = []
         self.tensor_check_names = []
+        self.tensor_check_ids = []
         self.tensor_check_examples = []
         self.guarded_code = guarded_code
 
@@ -417,6 +418,8 @@ class GuardBuilder:
             value = self.get(guard.name)
             self.tensor_check_names.append(self.arg_ref(guard))
             self.tensor_check_examples.append(value)
+            breakpoint()
+            self.tensor_check_ids.append(self.id_ref(value))
 
             # Note: Guard code produced for tensor_match is a little different.
             # We accumulate tensor names, then do a single install of `___check_tensors`.

@@ -110,16 +110,18 @@ class PySymInt(object):
     our program. They're what sit under FakeTensor, and contains our primary
     implementation of symbolic shapes.
     """
-    def __init__(self, expr, shape_env, constant=None):
+    def __init__(self, expr, shape_env, constant=None, ref_id=None):
         self.expr = expr
         self.shape_env = shape_env
         self.constant = constant
+        # breakpoint()
+        self.ref_id = ref_id
 
     def wrap(self, num):
         return PySymInt(sympy.Integer(num), self.shape_env, constant=num)
 
     def clone(self):
-        return PySymInt(self.expr, self.shape_env, constant=self.constant)
+        return PySymInt(self.expr, self.shape_env, constant=self.constant, ref_id=self.ref_id)
 
     def __str__(self):
         return f"{self.expr}"
@@ -135,7 +137,7 @@ class PySymInt(object):
     def guard_int(self, file, line):
         # TODO: use the file/line for some useful diagnostic on why a
         # guard occurred
-        return int(self.shape_env.evaluate_expr(self.expr))
+        return int(self.shape_env.evaluate_expr(self.expr, self.ref_id))
 
     def __sym_float__(self):
         if SYM_FUNCTION_MODE:
@@ -146,13 +148,15 @@ class PySymInt(object):
         return PySymFloat(self.expr, self.shape_env)
 
     def __bool__(self):
-        return bool(self.shape_env.evaluate_expr(self.shape_env.replace(self.expr)))
+        # breakpoint()
+        return bool(self.shape_env.evaluate_expr(self.shape_env.replace(self.expr), self.ref_id))
 
 class PySymFloat:
-    def __init__(self, expr, shape_env, constant=None):
+    def __init__(self, expr, shape_env, constant=None, ref_id=None):
         self.expr = expr
         self.shape_env = shape_env
         self.constant = constant
+        self.ref_id = ref_id
 
     def wrap(self, num):
         return PySymFloat(sympy.Float(num), self.shape_env, constant=num)
@@ -353,7 +357,7 @@ class ShapeEnv(object):
         We try our best to express stride in terms of the sizes, so as to not
         introduce new symbolic variables.
         """
-
+        breakpoint()
         size = [self.create_symbol(i) for i in ex.size()]
         stride: List[Optional[sympy.Expr]] = [None] * len(size)
         for i, val in enumerate(ex.stride()):
@@ -384,10 +388,10 @@ class ShapeEnv(object):
                 )[0]
                 stride[i] = self.create_symbol(val)
         assert all(x is not None for x in stride)
-        return [self.create_symintnode(i) for i in size], [self.create_symintnode(i) for i in stride]  # type: ignore[arg-type]
+        return [self.create_symintnode(i, id(ex)) for i in size], [self.create_symintnode(i, id(ex)) for i in stride]  # type: ignore[arg-type]
 
-    def create_symintnode(self, expr: Union["sympy.Expr", int]):
-        py_sym_int = PySymInt(expr, self)
+    def create_symintnode(self, expr: Union["sympy.Expr", int], ref_id):
+        py_sym_int = PySymInt(expr, self, ref_id=ref_id)
         cpp_sym_int = torch.SymIntNode.new_symint(py_sym_int)  # type: ignore[attr-defined]
         return cpp_sym_int
 
@@ -558,7 +562,7 @@ class ShapeEnv(object):
             return
 
     @lru_cache(256)
-    def evaluate_expr(self, expr: "sympy.Expr"):
+    def evaluate_expr(self, expr: "sympy.Expr", ref_id=None):
         """
         Given an expression, evaluates it, adding guards if necessary
         """
@@ -578,6 +582,6 @@ class ShapeEnv(object):
         # actually called us
         stack = ''.join(traceback.format_list(traceback.extract_stack()[:-2]))
         breakpoint()
-        self.guards.append((expr, concrete_val, stack))
+        self.guards.append((expr, concrete_val, stack, ref_id))
         print("GUARDS IN AOT", self.guards)
         return concrete_val

@@ -182,6 +182,7 @@ class TensorVariable(VariableTracker):
 
     @classmethod
     def create(cls, tx, proxy, example_value=None, **options):
+        # breakpoint()
         if "guards" in options and options["guards"] is not None:
             tx.output.guards.update(options["guards"])
 
@@ -368,6 +369,7 @@ class TensorVariable(VariableTracker):
         self.is_sparse = is_sparse
         self.class_type = class_type
         self.parameter_value = parameter_value
+        # breakpoint()
 
     def as_proxy(self):
         return self.proxy
