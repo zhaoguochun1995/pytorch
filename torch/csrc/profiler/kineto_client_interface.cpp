@@ -1,4 +1,5 @@
 #ifdef USE_KINETO
+#include <cstdlib>
 #include <libkineto.h>
 #include <torch/csrc/autograd/profiler_kineto.h>
 
@@ -65,6 +66,11 @@ struct RegisterLibKinetoClient {
   RegisterLibKinetoClient() {
     static profiler::impl::LibKinetoClient client;
     libkineto::api().registerClient(&client);
+
+    if (std::getenv("KINETO_USE_DAEMON") != nullptr) {
+      libkineto_init(/*cpuOnly=*/false, /*logOnError=*/true);
+      libkineto::api().suppressLogMessages();
+    }
   }
 } register_libkineto_client;
 #endif
