@@ -1160,6 +1160,7 @@ def main():
         'packaged/ATen/native/*',
         'packaged/ATen/templates/*',
     ]
+    # xxx
     setup(
         name=package_name,
         version=version,
