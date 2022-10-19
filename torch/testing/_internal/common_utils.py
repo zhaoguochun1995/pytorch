@@ -78,6 +78,7 @@ from torch.onnx import (
     register_custom_op_symbolic,
     unregister_custom_op_symbolic,
 )
+from torch.overrides import _no_torch_function_mode
 from torch.testing import make_tensor
 from torch.testing._comparison import (
     BooleanPair,
@@ -1362,7 +1363,7 @@ def freeze_rng_state():
     # Some OpInfos use freeze_rng_state for rng determinism, but
     # test_composite_compliance overrides dispatch for all torch functions
     # which we need to disable to get and set rng state
-    with no_dispatch(), disable_functorch():
+    with no_dispatch(), disable_functorch(), _no_torch_function_mode():
         rng_state = torch.get_rng_state()
         if torch.cuda.is_available():
             cuda_rng_state = torch.cuda.get_rng_state()
@@ -1375,7 +1376,7 @@ def freeze_rng_state():
         #
         # In the long run torch.cuda.set_rng_state should probably be
         # an operator.
-        with no_dispatch(), disable_functorch():
+        with no_dispatch(), disable_functorch(), _no_torch_function_mode():
             if torch.cuda.is_available():
                 torch.cuda.set_rng_state(cuda_rng_state)
             torch.set_rng_state(rng_state)
